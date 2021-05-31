@@ -1,5 +1,5 @@
 import React from 'react';
-import Component from './mini-react/Component';
+import Component from './mini-react-v1/Component';
 import './style.css';
 
 class Foo extends Component {

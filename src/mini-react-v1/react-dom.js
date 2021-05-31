@@ -1,16 +1,17 @@
 function render(vnode, container) {
-  const node = updateNode(vnode);
+  const node = createNode(vnode);
   container.appendChild(node);
 }
-function updateNode(vnode) {
+/**
+ * @desc 创建节点对象，包括原生DOM, 组件对象
+ */
+function createNode(vnode) {
   const { type } = vnode;
   let node = null;
   if (typeof type === 'function') {
-    if (type.prototype.isReactComponent) {
-      node = updateClassComponent(vnode);
-    } else {
-      node = updateFunctionComponent(vnode);
-    }
+    node = type.prototype.isReactComponent
+      ? updateClassComponent(vnode)
+      : updateFunctionComponent(vnode);
   } else if (typeof type === 'string') {
     node = updateHostComponent(vnode);
   } else {
@@ -25,18 +26,24 @@ function updateNode(vnode) {
 function updateHostComponent(vnode) {
   const { type, props } = vnode;
   const node = document.createElement(type);
+  updateNode(node, props);
+  return node;
+}
+/**
+ * @desc 更新DOM节点属性
+ */
+function updateNode(node, props) {
   Object.keys(props)
     .filter(k => k !== 'children')
     .forEach(k => {
       node[k] = props[k];
     });
-  return node;
 }
 function updateClassComponent(vnode) {
   const { type, props } = vnode;
   const comp = new type(props);
   const jsx = comp.render();
-  return updateNode(jsx);
+  return createNode(jsx);
 }
 /**
  * @desc 编译子节点对象
@@ -58,8 +65,7 @@ function updateTextComponent(text) {
 function updateFunctionComponent(vnode) {
   const { type, props } = vnode;
   const ele = type(props);
-  const node = updateNode(ele);
-  return node;
+  return createNode(ele);
 }
 export default {
   render
