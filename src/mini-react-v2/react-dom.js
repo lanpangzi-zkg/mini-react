@@ -17,6 +17,8 @@ function createNode(element) {
       .filter(v => v !== 'children')
       .forEach(k => (node[k] = props[k]));
     return node;
+  } else {
+    return document.createElement('div');
   }
 }
 /**
@@ -99,11 +101,20 @@ function updateFunctionComponent(workInProgress) {
   }
   reconcileChildren(type(props), workInProgress); // 将一级子节点的fiber生成好
 }
+function updateClassComponent(workInProgress) {
+  const { type, props } = workInProgress;
+  if (!workInProgress.stateNode) {
+    workInProgress.stateNode = document.createDocumentFragment();
+  }
+  reconcileChildren(new type(props).render(), workInProgress);
+}
 function performUnitOfWork(workInProgress) {
   // 深度遍历生成fiber
   const { type } = workInProgress;
   if (typeof type === 'function') {
-    updateFunctionComponent(workInProgress);
+    type.prototype.isReactComponent
+      ? updateClassComponent(workInProgress)
+      : updateFunctionComponent(workInProgress);
   } else if (type !== '__root__') {
     updateHostComponent(workInProgress);
   }
