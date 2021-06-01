@@ -13,7 +13,7 @@ export default function App() {
   return (
     <div className="box">
       <h1 id="a">Hello StackBlitz!</h1>
-      <p>Start editing to see some magic happen :)</p>
+      <p className="foo">Start editing to see some magic happen :)</p>
       {/* <Foo title="haha" /> */}
     </div>
   );

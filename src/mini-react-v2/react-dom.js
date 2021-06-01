@@ -9,30 +9,38 @@ function legacyRenderSubtreeIntoContainer(element, container, callback) {
     beginWork(element, container);
   }
 }
+function createNode(element) {
+  const { type, props } = element;
+  if (typeof element.type === 'string') {
+    const node = document.createElement(type);
+    Object.keys(props)
+      .filter(v => v !== 'children')
+      .forEach(k => (node[k] = props[k]));
+    return node;
+  }
+}
 /**
  * @desc 协调子节点
  */
 function reconcileChildren(children, workInProgress) {
-  console.log('reconcileChildren', children);
   if (children) {
     const _children = Array.isArray(children) ? children : [children];
     let previous = null;
     for (let i = 0; i < _children.length; i++) {
       let child = _children[i];
       if (typeof child === 'string') {
-        // workInProgress.stateNode.appendChild(document.createTextNode(child));
-        console.log(workInProgress);
+        // 文本节点
+        workInProgress.stateNode.appendChild(document.createTextNode(child));
         continue;
       }
       let newFiber = {
         type: child.type,
-        stateNode: null,
+        stateNode: createNode(child),
         child: null,
         sibling: null,
         return: workInProgress,
         props: { ...child.props }
       };
-      updateHostComponent(newFiber);
       if (i === 0) {
         // 第一个子节点
         workInProgress.child = newFiber;
@@ -41,16 +49,11 @@ function reconcileChildren(children, workInProgress) {
         previous.sibling = newFiber;
       }
       previous = newFiber;
-      // console.log(workInProgress.stateNode, newFiber.stateNode);
-      // workInProgress.stateNode.appendChild(newFiber.stateNode);
+      workInProgress.stateNode.appendChild(newFiber.stateNode);
     }
   }
 }
-function updateClassComponent(element) {
-  const { type, props } = element;
-  const instance = new type(props);
-  return instance.render();
-}
+
 function updateHostComponent(workInProgress) {
   const { type, props } = workInProgress;
   if (!workInProgress.stateNode) {
@@ -64,39 +67,44 @@ function updateHostComponent(workInProgress) {
   reconcileChildren(props?.children, workInProgress);
 }
 function commmitRoot() {
-  // console.log(rootFiber);
+  console.log('commmitRoot', rootFiber);
+  rootFiber.stateNode.appendChild(rootFiber.child.stateNode);
 }
 let rootFiber = null;
 let nextUnitOfWork = null;
 function beginWork(element, container) {
   rootFiber = nextUnitOfWork = {
-    type: element.type,
-    key: element.key,
-    props: { ...element.props },
-    child: null,
+    // 初始化根节点
+    type: '__root__',
+    key: '__root__',
+    props: null,
+    child: {
+      type: element.type,
+      stateNode: null,
+      child: null,
+      sibling: null,
+      return: rootFiber,
+      props: { ...element.props }
+    },
     return: null,
     sibling: null,
     stateNode: container
   };
-  workLoop(nextUnitOfWork);
 }
 function updateFunctionComponent(workInProgress) {
   const { type, props } = workInProgress;
-  const jsx = type(props);
   if (!workInProgress.stateNode) {
-    workInProgress.stateNode = jsx;
+    // 函数式组件，stateNode初始化为Fragment作为容器节点
+    workInProgress.stateNode = document.createDocumentFragment();
   }
-  if (!props.children) {
-    props.children = jsx;
-  }
-  reconcileChildren(props.children, workInProgress);
+  reconcileChildren(type(props), workInProgress); // 将一级子节点的fiber生成好
 }
 function performUnitOfWork(workInProgress) {
   // 深度遍历生成fiber
   const { type } = workInProgress;
   if (typeof type === 'function') {
     updateFunctionComponent(workInProgress);
-  } else {
+  } else if (type !== '__root__') {
     updateHostComponent(workInProgress);
   }
   // 返回下一个fiber
@@ -112,15 +120,14 @@ function performUnitOfWork(workInProgress) {
   }
 }
 function workLoop(deadline) {
-  // while (nextUnitOfWork && deadline.timeRemaining() > 0) {
-  while (nextUnitOfWork) {
+  while (nextUnitOfWork && deadline.timeRemaining() > 0) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
   }
   if (!nextUnitOfWork) {
     commmitRoot(); // 提交阶段，渲染dom到页面
   }
 }
-// requestIdleCallback(workLoop);
+requestIdleCallback(workLoop);
 
 export default {
   render
