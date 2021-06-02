@@ -17,9 +17,8 @@ function createNode(element) {
       .filter(v => v !== 'children')
       .forEach(k => (node[k] = props[k]));
     return node;
-  } else {
-    return document.createElement('div');
   }
+  return null;
 }
 /**
  * @desc 协调子节点
@@ -51,7 +50,13 @@ function reconcileChildren(children, workInProgress) {
         previous.sibling = newFiber;
       }
       previous = newFiber;
-      workInProgress.stateNode.appendChild(newFiber.stateNode);
+      if (newFiber.stateNode) {
+        let parentFiber = workInProgress.return;
+        while (!parentFiber.stateNode) {
+          parentFiber = parentFiber.return;
+        }
+        parentFiber.stateNode.appendChild(newFiber.stateNode);
+      }
     }
   }
 }
