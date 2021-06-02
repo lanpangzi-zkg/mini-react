@@ -125,8 +125,8 @@ function performUnitOfWork(workInProgress) {
   }
   let nextFiber = workInProgress;
   while (nextFiber) {
-    if (workInProgress.sibling) {
-      return workInProgress.sibling;
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
     }
     nextFiber = nextFiber.return;
   }
