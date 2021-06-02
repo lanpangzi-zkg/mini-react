@@ -87,7 +87,6 @@ function beginWork(element, container) {
   nextUnitOfWork = rootFiber = {
     // 初始化根节点
     type: '__root__',
-    key: '__root__',
     props: null,
     children: { ...element },
     return: null,
