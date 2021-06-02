@@ -2,7 +2,7 @@
 function render(element, container, callback) {
   legacyRenderSubtreeIntoContainer(element, container, callback);
 }
-function legacyRenderSubtreeIntoContainer(element, container, callback) {
+function legacyRenderSubtreeIntoContainer(element, container) {
   let root = container._reactRootContainer;
   if (!root) {
     // 首次渲染
@@ -51,8 +51,8 @@ function reconcileChildren(children, workInProgress) {
       }
       previous = newFiber;
       if (newFiber.stateNode) {
-        let parentFiber = workInProgress.return;
-        while (!parentFiber.stateNode) {
+        let parentFiber = workInProgress;
+        while (parentFiber && !parentFiber.stateNode) {
           parentFiber = parentFiber.return;
         }
         parentFiber.stateNode.appendChild(newFiber.stateNode);
@@ -75,24 +75,21 @@ function updateHostComponent(workInProgress) {
 }
 function commmitRoot() {
   console.log('commmitRoot', rootFiber);
-  rootFiber.stateNode.appendChild(rootFiber.child.stateNode);
+  let child = rootFiber.child;
+  while (child && !child.stateNode) {
+    child = child.child;
+  }
+  rootFiber.stateNode.appendChild(child.stateNode);
 }
 let rootFiber = null;
 let nextUnitOfWork = null;
 function beginWork(element, container) {
-  rootFiber = nextUnitOfWork = {
+  nextUnitOfWork = rootFiber = {
     // 初始化根节点
     type: '__root__',
     key: '__root__',
     props: null,
-    child: {
-      type: element.type,
-      stateNode: null,
-      child: null,
-      sibling: null,
-      return: rootFiber,
-      props: { ...element.props }
-    },
+    children: { ...element },
     return: null,
     sibling: null,
     stateNode: container
@@ -100,17 +97,14 @@ function beginWork(element, container) {
 }
 function updateFunctionComponent(workInProgress) {
   const { type, props } = workInProgress;
-  if (!workInProgress.stateNode) {
-    // 函数式组件，stateNode初始化为Fragment作为容器节点
-    workInProgress.stateNode = document.createDocumentFragment();
-  }
   reconcileChildren(type(props), workInProgress); // 将一级子节点的fiber生成好
+}
+function updateRootComponent(workInProgress) {
+  const { children } = workInProgress;
+  reconcileChildren(children, workInProgress);
 }
 function updateClassComponent(workInProgress) {
   const { type, props } = workInProgress;
-  if (!workInProgress.stateNode) {
-    workInProgress.stateNode = document.createDocumentFragment();
-  }
   reconcileChildren(new type(props).render(), workInProgress);
 }
 function performUnitOfWork(workInProgress) {
@@ -120,7 +114,9 @@ function performUnitOfWork(workInProgress) {
     type.prototype.isReactComponent
       ? updateClassComponent(workInProgress)
       : updateFunctionComponent(workInProgress);
-  } else if (type !== '__root__') {
+  } else if (type === '__root__') {
+    updateRootComponent(workInProgress);
+  } else {
     updateHostComponent(workInProgress);
   }
   // 返回下一个fiber
